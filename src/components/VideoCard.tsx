@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Play, Pause, Download, Maximize2, ExternalLink, User } from "lucide-react";
+import { Play, Pause, Download, Maximize2, ExternalLink, User, Loader2 } from "lucide-react";
 import { PexelsVideo } from "@/types/pexels";
+import { downloadMedia } from "@/utils/download";
 
 interface VideoCardProps {
   video: PexelsVideo;
@@ -57,16 +58,21 @@ export default function VideoCard({ video, onSelect }: VideoCardProps) {
     }
   };
 
-  const handleDownload = (e: React.MouseEvent) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!downloadFile) return;
-    const link = document.createElement("a");
-    link.href = downloadFile.link;
-    link.target = "_blank";
-    link.download = `pexels-video-${video.id}.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!downloadFile || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await downloadMedia(downloadFile.link, `pexels-video-${video.id}.mp4`);
+    } catch (err) {
+      console.error("Video download failed:", err);
+    } finally {
+      setTimeout(() => {
+        setIsDownloading(false);
+      }, 1200);
+    }
   };
 
   return (
@@ -303,7 +309,8 @@ export default function VideoCard({ video, onSelect }: VideoCardProps) {
             <button
               type="button"
               onClick={handleDownload}
-              title="Download Video File"
+              disabled={isDownloading}
+              title={isDownloading ? "Downloading..." : "Download Video File"}
               style={{
                 width: "36px",
                 height: "36px",
@@ -314,14 +321,16 @@ export default function VideoCard({ video, onSelect }: VideoCardProps) {
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#ffffff",
-                cursor: "pointer",
+                cursor: isDownloading ? "wait" : "pointer",
                 boxShadow: "0 4px 12px rgba(99, 102, 241, 0.4)",
                 transition: "transform 0.2s ease",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+              onMouseEnter={(e) => {
+                if (!isDownloading) e.currentTarget.style.transform = "scale(1.1)";
+              }}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
             >
-              <Download size={16} />
+              {isDownloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             </button>
           )}
         </div>

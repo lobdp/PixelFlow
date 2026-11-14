@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { X, Download, ExternalLink, User, Calendar, Image as ImageIcon, Video as VideoIcon } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Download, ExternalLink, User, Calendar, Image as ImageIcon, Video as VideoIcon, Loader2 } from "lucide-react";
 import { PexelsPhoto, PexelsVideo } from "@/types/pexels";
+import { downloadMedia } from "@/utils/download";
 
 interface MediaModalProps {
   media: PexelsPhoto | PexelsVideo | null;
@@ -25,14 +26,19 @@ export default function MediaModal({ media, type, onClose }: MediaModalProps) {
   const photo = isPhoto ? (media as PexelsPhoto) : null;
   const video = !isPhoto ? (media as PexelsVideo) : null;
 
-  const handleDownload = (url: string, filename: string) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
+  const handleDownload = async (url: string, filename: string, key: string) => {
+    setDownloadingKey(key);
+    try {
+      await downloadMedia(url, filename);
+    } catch (err) {
+      console.error("Failed to download media:", err);
+    } finally {
+      setTimeout(() => {
+        setDownloadingKey((prev) => (prev === key ? null : prev));
+      }, 1200);
+    }
   };
 
   return (
@@ -217,44 +223,84 @@ export default function MediaModal({ media, type, onClose }: MediaModalProps) {
               <>
                 <button
                   type="button"
-                  onClick={() => handleDownload(photo.src.medium, `pexels-${photo.id}-medium.jpg`)}
+                  onClick={() => handleDownload(photo.src.medium, `pexels-${photo.id}-medium.jpg`, "photo-medium")}
+                  disabled={downloadingKey === "photo-medium"}
                   className="btn-ghost"
                   style={{ fontSize: "0.82rem", padding: "6px 14px" }}
                 >
-                  <Download size={14} /> Medium
+                  {downloadingKey === "photo-medium" ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} /> Medium
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDownload(photo.src.large, `pexels-${photo.id}-large.jpg`)}
+                  onClick={() => handleDownload(photo.src.large, `pexels-${photo.id}-large.jpg`, "photo-large")}
+                  disabled={downloadingKey === "photo-large"}
                   className="btn-ghost"
                   style={{ fontSize: "0.82rem", padding: "6px 14px" }}
                 >
-                  <Download size={14} /> Large
+                  {downloadingKey === "photo-large" ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} /> Large
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDownload(photo.src.original, `pexels-${photo.id}-original.jpg`)}
+                  onClick={() => handleDownload(photo.src.original, `pexels-${photo.id}-original.jpg`, "photo-original")}
+                  disabled={downloadingKey === "photo-original"}
                   className="btn-primary"
                   style={{ fontSize: "0.85rem", padding: "8px 18px" }}
                 >
-                  <Download size={15} /> Download Original
+                  {downloadingKey === "photo-original" ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={15} /> Download Original
+                    </>
+                  )}
                 </button>
               </>
             )}
 
             {!isPhoto && video && (
               <>
-                {video.video_files.slice(0, 3).map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => handleDownload(f.link, `pexels-${video.id}-${f.quality || "video"}.mp4`)}
-                    className={f.quality === "hd" ? "btn-primary" : "btn-ghost"}
-                    style={{ fontSize: "0.82rem", padding: "6px 14px" }}
-                  >
-                    <Download size={14} /> {f.quality?.toUpperCase() || "MP4"} {f.width ? `(${f.width}p)` : ""}
-                  </button>
-                ))}
+                {video.video_files.slice(0, 3).map((f) => {
+                  const key = `video-${f.id}`;
+                  const isDownloading = downloadingKey === key;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => handleDownload(f.link, `pexels-${video.id}-${f.quality || "video"}.mp4`, key)}
+                      disabled={isDownloading}
+                      className={f.quality === "hd" ? "btn-primary" : "btn-ghost"}
+                      style={{ fontSize: "0.82rem", padding: "6px 14px" }}
+                    >
+                      {isDownloading ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" /> Downloading...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={14} /> {f.quality?.toUpperCase() || "MP4"} {f.width ? `(${f.width}p)` : ""}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
               </>
             )}
           </div>
