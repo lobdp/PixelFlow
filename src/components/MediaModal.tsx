@@ -12,6 +12,8 @@ interface MediaModalProps {
 }
 
 export default function MediaModal({ media, type, onClose }: MediaModalProps) {
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -25,8 +27,6 @@ export default function MediaModal({ media, type, onClose }: MediaModalProps) {
   const isPhoto = type === "photo";
   const photo = isPhoto ? (media as PexelsPhoto) : null;
   const video = !isPhoto ? (media as PexelsVideo) : null;
-
-  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const handleDownload = async (url: string, filename: string, key: string) => {
     setDownloadingKey(key);
