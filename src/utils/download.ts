@@ -27,3 +27,4 @@ export async function downloadMedia(url: string, filename: string): Promise<void
   link.click();
   document.body.removeChild(link);
 }
+
